@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: msql-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500M
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: msql-deployment
+  labels:
+    app: msql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: msql
+  template:
+    metadata:
+      labels:
+        app: msql
+    spec:
+      volumes:
+      - name: msql-volume
+        persistentVolumeClaim:
+          claimName: msql-claim
+      containers:
+      - name: mysql
+        image: alpine_mariadb
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: msql-volume
+          mountPath: /var/lib/mysql
+        env:
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: wp-secret
+              key: dbname
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: wp-secret
+              key: dbuser
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wp-secret
+              key: dbpassword
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: msql-service
+  labels:
+    app: msql
+spec:
+  ports:
+    - name: msql-port
+      protocol: TCP
+      port: 3306
+      targetPort: 3306
+  selector:
+    app: msql

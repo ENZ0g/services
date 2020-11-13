@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftp-deployment
+  labels:
+    app: ftp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ftp
+  template:
+    metadata:
+      labels:
+        app: ftp
+    spec:
+      containers:
+      - name: ftp
+        image: alpine_ftp
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 20
+        - containerPort: 21
+        - containerPort: 21021
+        env:
+        - name: FTP_USER
+          valueFrom:
+            secretKeyRef:
+              name: ftp-secret
+              key: ftpuser
+        - name: FTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ftp-secret
+              key: ftppassword
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftp-service
+  labels:
+    app: ftp
+spec:
+  selector:
+    app: ftp
+  type: LoadBalancer
+  loadBalancerIP: 192.168.99.104
+  ports:
+    - name: ftp-port
+      protocol: TCP
+      port: 21
+      targetPort: 21
+    - name: pftp-port
+      protocol: TCP
+      port: 21021
+      targetPort: 21021
+    - name: cftp-port
+      protocol: TCP
+      port: 20
+      targetPort: 20
